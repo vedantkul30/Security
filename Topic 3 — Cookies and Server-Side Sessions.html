@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Topic 3 — Cookies and Server-Side Sessions | Senior Engineer Study Notes</title>
+  
+  <!-- Fonts & Mermaid.js -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-canvas: #090d16;
+      --bg-surface: #0f172a;
+      --bg-card: #131d35;
+      --bg-card-hover: #182442;
+      --border-subtle: #1e293b;
+      --border-accent: #334155;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent-blue: #38bdf8;
+      --accent-indigo: #818cf8;
+      --accent-emerald: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-rose: #f43f5e;
+      --code-bg: #070b13;
+      --sidebar-width: 300px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      line-height: 1.65;
+      font-size: 15px;
+      overflow-x: hidden;
+      display: flex;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: var(--sidebar-width);
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      background-color: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      z-index: 50;
+    }
+
+    .sidebar-header {
+      padding: 24px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .sidebar-header h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-header p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 12px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-accent) transparent;
+    }
+
+    .sidebar-nav a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 0.825rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-nav a:hover {
+      background-color: var(--border-subtle);
+      color: var(--accent-blue);
+    }
+
+    /* Main Container */
+    .content-wrapper {
+      flex: 1;
+      max-width: calc(100vw - var(--sidebar-width));
+      padding: 40px 60px 100px 60px;
+      overflow-x: hidden;
+    }
+
+    .main-article {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    /* Header Banner */
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+      border: 1px solid var(--border-subtle);
+      padding: 36px 32px;
+      border-radius: 14px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-banner::after {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; width: 300px; height: 100%;
+      background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 70%);
+      pointer-events: none;
+    }
+
+    .meta-tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-blue { background: rgba(56, 189, 248, 0.12); color: var(--accent-blue); border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge-indigo { background: rgba(129, 140, 248, 0.12); color: var(--accent-indigo); border: 1px solid rgba(129, 140, 248, 0.3); }
+    .badge-emerald { background: rgba(52, 211, 153, 0.12); color: var(--accent-emerald); border: 1px solid rgba(52, 211, 153, 0.3); }
+    .badge-amber { background: rgba(251, 191, 36, 0.12); color: var(--accent-amber); border: 1px solid rgba(251, 191, 36, 0.3); }
+
+    h1.main-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.25;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+
+    .sub-title {
+      font-size: 1.05rem;
+      color: var(--accent-blue);
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .intro-text {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    /* Structural & Typography Styles */
+    section {
+      margin-bottom: 60px;
+      scroll-margin-top: 30px;
+    }
+
+    h2.section-heading {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    h3.sub-heading {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin: 32px 0 14px 0;
+      letter-spacing: -0.01em;
+    }
+
+    h4.nested-heading {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin: 22px 0 10px 0;
+    }
+
+    p {
+      margin-bottom: 14px;
+      color: #cbd5e1;
+    }
+
+    ul, ol {
+      margin-bottom: 18px;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 6px;
+      color: #cbd5e1;
+    }
+
+    li strong {
+      color: #fff;
+    }
+
+    /* Callouts */
+    .callout {
+      border-left: 4px solid var(--accent-blue);
+      background-color: rgba(56, 189, 248, 0.05);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 20px 0;
+    }
+
+    .callout-amber {
+      border-left-color: var(--accent-amber);
+      background-color: rgba(251, 191, 36, 0.05);
+    }
+
+    .callout-emerald {
+      border-left-color: var(--accent-emerald);
+      background-color: rgba(52, 211, 153, 0.05);
+    }
+
+    .callout-rose {
+      border-left-color: var(--accent-rose);
+      background-color: rgba(244, 63, 94, 0.05);
+    }
+
+    .callout h4 {
+      font-size: 0.95rem;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .callout p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+      margin: 22px 0 28px 0;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      background: var(--bg-surface);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      text-align: left;
+    }
+
+    thead {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    th {
+      padding: 12px 16px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.02em;
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: #cbd5e1;
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.015);
+    }
+
+    /* Code Blocks */
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+      color: #e2e8f0;
+      margin: 16px 0;
+    }
+
+    code {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85em;
+      background-color: rgba(255, 255, 255, 0.08);
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: #e0e7ff;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      color: inherit;
+    }
+
+    /* Diagrams wrapper */
+    .diagram-box {
+      background-color: #070b13;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 24px;
+      margin: 24px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: auto;
+    }
+
+    .diagram-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      font-weight: 600;
+      align-self: flex-start;
+    }
+
+    /* Checklists */
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+      margin: 16px 0;
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 14px;
+      border: 1px solid var(--border-subtle);
+      background-color: var(--bg-surface);
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .checklist-item input[type="checkbox"] {
+      margin-top: 4px;
+      cursor: pointer;
+      accent-color: var(--accent-blue);
+      width: 16px;
+      height: 16px;
+    }
+
+    .checklist-item label {
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+    }
+
+    .source-file-tag {
+      font-size: 0.7rem;
+      font-family: 'Fira Code', monospace;
+      color: var(--text-dim);
+      margin-bottom: 24px;
+    }
+
+    a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 1024px) {
+      body { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+      .content-wrapper { max-width: 100vw; padding: 24px 20px 80px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT SIDEBAR NAVIGATION -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>🍪 Topic 3: Sessions & Cookies</h2>
+      <p>Senior Engineer Study Notes</p>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#sec-a">A. Scope & Objectives</a>
+      <a href="#sec-b">B. Mental Model: HTTP & Sessions</a>
+      <a href="#sec-c">C. Lifecycle & Request Execution</a>
+      <a href="#sec-d">D. Cookie Attributes & Behavior</a>
+      <a href="#sec-e">E. Session Fixation vs Hijacking</a>
+      <a href="#sec-f">F. Expiration, Logout & Invalidation</a>
+      <a href="#sec-g">G. Session-ID Rotation</a>
+      <a href="#sec-h">H. Concurrent Sessions & Limits</a>
+      <a href="#sec-i">I. Storage: In-Memory vs Redis</a>
+      <a href="#sec-j">J. CSRF Protection Fundamentals</a>
+      <a href="#sec-k">K. Practical Java / Spring Boot</a>
+      <a href="#sec-l">L. Walkthroughs & Failures</a>
+      <a href="#sec-m">M. Testing & Verification</a>
+      <a href="#sec-n">N. Production Readiness</a>
+      <a href="#sec-o">O. Senior Engineer Mindset</a>
+      <a href="#sec-p">P. Interview & Review Prep</a>
+      <a href="#sec-q">Q. Hands-on Exercise</a>
+      <a href="#sec-r">R. Topic Recap & Glossary</a>
+    </nav>
+  </aside>
+
+  <!-- MAIN ARTICLE WRAPPER -->
+  <main class="content-wrapper">
+    <article class="main-article">
+
+      <div class="source-file-tag">--- START OF FILE Paste October 18, 2026 - 4:23PM ---</div>
+
+      <!-- HERO BANNER -->
+      <header class="hero-banner">
+        <div class="meta-tag-row">
+          <span class="badge badge-blue">Java 17+</span>
+          <span class="badge badge-indigo">Spring Boot 3.x / Security 6.x</span>
+          <span class="badge badge-emerald">HttpSession & Cookies</span>
+          <span class="badge badge-amber">CSRF & Fixation</span>
+        </div>
+        <h1 class="main-title">Topic 3 — Cookies and Server-Side Sessions</h1>
+        <p class="sub-title">Backend Engineering & Application Security · Senior Engineer Study Notes · Java 17+ / Spring Boot</p>
+        
+        <p class="intro-text">
+          <strong>The central question in this topic is:</strong><br>
+          <em>How can a server recognize the same user across multiple HTTP requests without asking the user to enter their password every time?</em>
+        </p>
+        <p class="intro-text">
+          The answer is the combination of a server-side session and a mechanism for carrying a session identifier between requests, commonly a browser cookie.
+        </p>
+        <p class="intro-text">
+          This is a foundational backend concept. Before learning JWT and stateless authentication in Topic 6, you should understand how traditional session-based authentication works, where its state lives, how browsers send cookies, and how session security can fail.
+        </p>
+        <p class="intro-text">
+          We will build a Java/Spring Boot mental model, examine the internal request lifecycle, and design a secure session-based login system for a financial application.
+        </p>
+      </header>
+
+      <!-- SECTION A -->
+      <section id="sec-a">
+        <h2 class="section-heading">A. Topic scope and learning objectives</h2>
+        <p>By the end of this topic, you should be able to:</p>
+        <ul>
+          <li>Explain why HTTP is stateless and why applications use sessions.</li>
+          <li>Distinguish the session identifier from the actual session data.</li>
+          <li>Trace session creation, lookup, expiration, logout and invalidation.</li>
+          <li>Explain how <code>JSESSIONID</code> and browser cookies work together.</li>
+          <li>Understand <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite</code>, <code>Path</code>, <code>Domain</code>, <code>Max-Age</code> and expiration.</li>
+          <li>Explain session fixation and session hijacking, including their differences.</li>
+          <li>Design session-ID rotation after authentication.</li>
+          <li>Understand concurrent sessions and session limits.</li>
+          <li>Compare in-memory session storage with distributed storage such as Redis.</li>
+          <li>Explain why cookie-based authentication creates CSRF considerations.</li>
+          <li>Evaluate remember-me functionality and its security trade-offs.</li>
+          <li>Implement and test a basic session-based login system using Java and Spring Boot.</li>
+        </ul>
+
+        <h3 class="sub-heading">Scope boundaries</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Included now</th>
+                <th>Reserved for later topics</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Server-side session lifecycle</td>
+                <td>Spring Security's full filter-chain architecture — Topic 4</td>
+              </tr>
+              <tr>
+                <td>Session identifiers and cookies</td>
+                <td>Fine-grained roles and resource authorization — Topic 5</td>
+              </tr>
+              <tr>
+                <td>Session fixation and hijacking</td>
+                <td>JWT and stateless authentication — Topic 6</td>
+              </tr>
+              <tr>
+                <td>Session storage and concurrency</td>
+                <td>API keys, MFA, OAuth2 and OIDC — Topics 7–10</td>
+              </tr>
+              <tr>
+                <td>CSRF fundamentals for cookie-based authentication</td>
+                <td>Comprehensive production security testing and broader CORS/XSS controls — Topic 11</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>We will reuse Topic 2's password-verification mechanism when constructing the login flow, but we will not repeat the full password-hashing lesson.</p>
+        <p><em>Assumptions:</em> Java 17+, Spring Boot 3.x and Spring Security 6.x. Where framework-specific behavior matters, the examples will identify the relevant component rather than implying that every session operation is implemented by the same class.</p>
+      </section>
+
+      <!-- SECTION B -->
+      <section id="sec-b">
+        <h2 class="section-heading">B. Mental model: HTTP, cookies and sessions</h2>
+
+        <h3 class="sub-heading">1. Why sessions exist</h3>
+        <p>HTTP requests are independent at the protocol level. A server does not automatically remember that two requests came from the same user merely because they came from the same browser.</p>
+        <p>Consider these requests:</p>
+        <pre><code>GET /api/portfolio HTTP/1.1
+Host: app.example.com</code></pre>
+        <pre><code>GET /api/portfolio HTTP/1.1
+Host: app.example.com</code></pre>
+        <p>Without some additional mechanism, the server cannot infer that the second request belongs to the same authenticated user as the first.</p>
+        <p>The application needs a way to associate a later request with previously established authentication state.</p>
+        <p>A session provides that association.</p>
+
+        <h3 class="sub-heading">2. Session versus cookie</h3>
+        <p>This is the most important distinction in the topic.</p>
+        
+        <div class="callout callout-blue">
+          <h4>Session — server-side state</h4>
+          <p>The session contains data maintained by the server, potentially including the authenticated user's identity, session metadata and other application state.</p>
+        </div>
+
+        <div class="callout callout-emerald">
+          <h4>Cookie — browser-side storage and transport</h4>
+          <p>A cookie can carry a session identifier between the browser and server. The identifier lets the server locate the corresponding session.</p>
+        </div>
+
+        <p>A cookie is not the session itself.</p>
+        <p>For example, a browser may store:</p>
+        <pre><code>Set-Cookie: JSESSIONID=opaque-random-value; Path=/; HttpOnly; Secure; SameSite=Lax</code></pre>
+        <p>The value <code>opaque-random-value</code> is a placeholder. A real session identifier must be generated securely and should not encode sensitive information.</p>
+        <p>The server associates the identifier with server-side state. The browser ordinarily sends the cookie back on subsequent requests that match the cookie's scope and other sending rules.</p>
+        <p>The browser does not need to know the session's internal data.</p>
+
+        <h3 class="sub-heading">3. The mental model</h3>
+        <p>Imagine a bank's customer-support desk.</p>
+        <ul>
+          <li>The server-side session is the bank's internal record of an authenticated interaction.</li>
+          <li>The session identifier is a reference used to retrieve that record.</li>
+          <li>The cookie is the envelope through which the browser carries that reference.</li>
+        </ul>
+        <p>Possessing a valid reference can allow someone to act within the associated session. Therefore, the session identifier is a sensitive bearer credential even though it is not the user's password.</p>
+        <p>The analogy has a limitation: real session identifiers are cryptographic values, not predictable account numbers, and the application must validate the request and apply its security policy.</p>
+
+        <h3 class="sub-heading">4. What a session should and should not contain</h3>
+        <p>A session may contain:</p>
+        <ul>
+          <li>A reference to the authenticated principal.</li>
+          <li>Authentication state or related metadata.</li>
+          <li>Creation and last-access timestamps.</li>
+          <li>Application-specific transient state.</li>
+          <li>Security-related metadata needed by the session implementation.</li>
+        </ul>
+        <p>It should not ordinarily contain:</p>
+        <ul>
+          <li>Plaintext passwords.</li>
+          <li>Raw password-reset tokens.</li>
+          <li>Unnecessary copies of sensitive financial records.</li>
+          <li>Long-lived secrets that could be avoided.</li>
+          <li>Large amounts of data that should live in the database.</li>
+        </ul>
+        <p>Prefer storing a stable user identifier and retrieving authoritative business data when needed. Keeping stale copies of permissions or account information in a session can introduce consistency and security problems.</p>
+      </section>
+
+      <!-- SECTION C -->
+      <section id="sec-c">
+        <h2 class="section-heading">C. Session lifecycle and internal execution</h2>
+
+        <h3 class="sub-heading">1. Creating a session</h3>
+        <p>A session can be created when the application needs to maintain server-side state. In a Java Servlet application, <code>HttpServletRequest.getSession()</code> retrieves the current session or creates one if it does not exist.</p>
+        <p>Compare:</p>
+        <pre><code>HttpSession session = request.getSession();</code></pre>
+        <p>with:</p>
+        <pre><code>HttpSession session = request.getSession(false);</code></pre>
+        <p>The difference matters:</p>
+        <ul>
+          <li><code>getSession()</code> returns an existing session or creates a new one.</li>
+          <li><code>getSession(false)</code> returns the existing session or <code>null</code> if none exists.</li>
+        </ul>
+        <p>An authentication check should not accidentally create a fresh session for every unauthenticated request when it only needs to inspect an existing session.</p>
+        <p>For example:</p>
+        <pre><code>HttpSession session = request.getSession(false);
+
+if (session == null) {
+    // No existing session.
+    // Handle the unauthenticated request.
+}</code></pre>
+        <p>This avoids unnecessary session creation, although the application must still determine whether the existing session represents an authenticated user.</p>
+
+        <h3 class="sub-heading">2. The complete request lifecycle</h3>
+        <p>Consider a customer signing in to a portfolio application.</p>
+
+        <!-- Mermaid Sequence Diagram 1 -->
+        <div class="diagram-box">
+          <div class="diagram-title">Complete Session Request Lifecycle</div>
+          <div class="mermaid">
+sequenceDiagram
+    participant B as Browser
+    participant A as Java Application
+    participant S as Session Store
+    participant D as Database
+
+    B->>A: POST /login with credentials
+    A->>D: Retrieve user and stored password hash
+    D-->>A: User record
+    A->>A: Verify submitted password
+    A->>S: Create or rotate authenticated session
+    S-->>A: Session state
+    A-->>B: Login success and Set-Cookie
+    B->>A: GET /portfolio with session cookie
+    A->>S: Resolve session identifier
+    S-->>A: Authenticated session state
+    A->>D: Retrieve portfolio data
+    D-->>A: Portfolio data
+    A-->>B: Authorized response
+          </div>
+        </div>
+
+        <p>This diagram shows the conceptual flow. In a Spring Security application, authentication and session persistence are coordinated by framework components; a manually implemented servlet flow does not automatically acquire all those protections.</p>
+        <p>The important sequence is:</p>
+        <ol>
+          <li>The application verifies the credentials.</li>
+          <li>The authenticated state is established server-side.</li>
+          <li>The browser receives the session identifier.</li>
+          <li>The browser sends that identifier with subsequent matching requests.</li>
+          <li>The server resolves the session and determines whether the request has an authenticated context.</li>
+          <li>The application performs the requested business operation.</li>
+          <li>The session expires or is explicitly invalidated when appropriate.</li>
+        </ol>
+        <p>A session cookie alone is not proof that the current request is authorized. The identifier must resolve to valid session state, and the application must enforce its access policy.</p>
+
+        <h3 class="sub-heading">3. Where does session state live?</h3>
+        <p>The storage location depends on the application's design.</p>
+        <p><strong>Browser</strong><br>Holds the session identifier in a cookie and sends it according to cookie rules. It should not hold the authoritative server-side session record.</p>
+        <p><strong>Application process</strong><br>May hold session data in memory in a simple deployment. This is easy to operate initially, but session state may disappear when the process restarts and may not be available to other application instances.</p>
+        <p><strong>Shared session store</strong><br>Multiple application instances can access a common session repository, such as Redis, through a suitable session-management integration. This supports horizontal scaling but introduces dependency availability, latency, serialization, consistency and operational considerations.</p>
+        <p>The session identifier is the reference. The session store contains the associated state.</p>
+        <p>This separation allows the application to invalidate a session on the server even when the browser still possesses a copy of the old identifier.</p>
+      </section>
+
+      <!-- SECTION D -->
+      <section id="sec-d">
+        <h2 class="section-heading">D. Cookie attributes and browser behavior</h2>
+        <p>Cookies are defined through the HTTP <code>Set-Cookie</code> response header and subsequently sent through the <code>Cookie</code> request header when applicable.</p>
+        <p>A server might respond with:</p>
+        <pre><code>Set-Cookie: JSESSIONID=opaque-random-value; Path=/; Secure; HttpOnly; SameSite=Lax</code></pre>
+        <p>The browser stores the cookie according to its attributes and browser rules. On later requests that match the cookie's scope and sending conditions, the browser may send:</p>
+        <pre><code>Cookie: JSESSIONID=opaque-random-value</code></pre>
+        <p>The request header does not normally repeat the cookie's <code>Secure</code>, <code>HttpOnly</code> or <code>SameSite</code> attributes. Those are browser-side cookie instructions established through <code>Set-Cookie</code>.</p>
+
+        <h3 class="sub-heading">1. Cookie attribute reference</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Attribute</th>
+                <th>Purpose</th>
+                <th>Security consideration</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>Secure</code></td>
+                <td>Sends the cookie only over secure transport under browser rules</td>
+                <td>Use for session cookies in HTTPS deployments</td>
+              </tr>
+              <tr>
+                <td><code>HttpOnly</code></td>
+                <td>Prevents access through browser script APIs such as <code>document.cookie</code></td>
+                <td>Reduces direct session-cookie theft through some XSS attacks</td>
+              </tr>
+              <tr>
+                <td><code>SameSite</code></td>
+                <td>Restricts cookie sending in certain cross-site contexts</td>
+                <td>Helps mitigate CSRF but is not a universal replacement for CSRF defenses</td>
+              </tr>
+              <tr>
+                <td><code>Path</code></td>
+                <td>Limits the request paths for which the browser sends the cookie</td>
+                <td>Narrow scope can reduce unintended exposure</td>
+              </tr>
+              <tr>
+                <td><code>Domain</code></td>
+                <td>Controls which hosts receive the cookie</td>
+                <td>Omitting it generally keeps the cookie host-only</td>
+              </tr>
+              <tr>
+                <td><code>Max-Age</code></td>
+                <td>Specifies a relative persistence lifetime in seconds</td>
+                <td>Controls browser persistence, not server-side session validity</td>
+              </tr>
+              <tr>
+                <td><code>Expires</code></td>
+                <td>Specifies a cookie expiration date</td>
+                <td>Browser retention is separate from server-side session expiration</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>These behaviors are defined by cookie standards and browser implementations; the <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Session Management Cheat Sheet</a> provides practical security guidance.</p>
+
+        <h3 class="sub-heading">2. <code>Secure</code></h3>
+        <p>The <code>Secure</code> attribute tells the browser to send the cookie only over secure HTTPS connections.</p>
+        <p>Without it, a session identifier could be exposed if the browser sends it over an unencrypted HTTP request under the applicable cookie rules.</p>
+        <p>For production authentication cookies, use HTTPS throughout the authenticated interaction and configure the cookie as secure.</p>
+        <p>Do not rely only on redirecting HTTP traffic to HTTPS. The session cookie itself must be configured correctly.</p>
+
+        <h3 class="sub-heading">3. <code>HttpOnly</code></h3>
+        <p><code>HttpOnly</code> prevents ordinary client-side JavaScript from reading the cookie through interfaces such as <code>document.cookie</code>.</p>
+        <p>This reduces the ability of injected JavaScript to directly extract the session identifier.</p>
+        <p>However, <code>HttpOnly</code> does not make XSS harmless. Malicious script running in the application's origin may still be able to issue requests as the user, even if it cannot read the cookie.</p>
+        <p>Therefore:</p>
+        <ul>
+          <li>Use <code>HttpOnly</code> for session cookies.</li>
+          <li>Still prevent XSS through appropriate application controls.</li>
+          <li>Do not treat <code>HttpOnly</code> as a replacement for safe rendering or server-side authorization.</li>
+        </ul>
+
+        <h3 class="sub-heading">4. <code>SameSite</code></h3>
+        <p>The common values are:</p>
+        <ul>
+          <li><code>Strict</code>: The browser restricts sending the cookie with cross-site requests more aggressively.</li>
+          <li><code>Lax</code>: Allows some cross-site top-level navigations, while restricting many cross-site subrequests.</li>
+          <li><code>None</code>: Allows cross-site sending when other browser rules permit it; modern browsers require <code>Secure</code> with <code>SameSite=None</code>.</li>
+        </ul>
+        <p>The choice affects both security and user experience.</p>
+        <p>For example, <code>Strict</code> may be appropriate for a sensitive banking interface that does not need to preserve login state when the user arrives from an external link. <code>Lax</code> can offer a more convenient balance for many web applications.</p>
+        <p>The correct choice depends on the application's navigation patterns and threat model.</p>
+        <div class="callout callout-amber">
+          <h4>Important Distinction</h4>
+          <p>A site can be cross-origin but still same-site. <code>SameSite</code> is not equivalent to the same-origin policy, and it does not isolate different applications merely because they use different subdomains.</p>
+          <p>OWASP recommends treating <code>SameSite</code> as defense in depth and explains the conditions under which additional CSRF protection is needed. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Reference</a>)</p>
+        </div>
+
+        <h3 class="sub-heading">5. <code>Path</code> and <code>Domain</code></h3>
+        <p>Suppose the application sets:</p>
+        <pre><code>Set-Cookie: JSESSIONID=opaque-value; Path=/</code></pre>
+        <p>The cookie is eligible to be sent for matching paths under the host that set it.</p>
+        <p>A <code>Domain</code> attribute can expand cookie scope to subdomains. For example, setting <code>Domain=example.com</code> can make the cookie available to matching hosts under that domain.</p>
+        <p>That may be necessary for some architectures, but it increases the number of systems that could influence or receive the cookie.</p>
+        <p>For sensitive session cookies, prefer omitting <code>Domain</code> unless sharing across subdomains is an explicit requirement.</p>
+        <p>The <code>Path</code> attribute is a scoping mechanism, not a complete security boundary between applications on the same host.</p>
+
+        <h3 class="sub-heading">6. <code>Max-Age</code>, <code>Expires</code> and server-side expiration</h3>
+        <p>There are two distinct lifetimes:</p>
+        <ol>
+          <li>Cookie persistence: How long the browser retains or sends the cookie.</li>
+          <li>Session validity: How long the server accepts the corresponding session.</li>
+        </ol>
+        <p>These must not be confused.</p>
+        <p>A browser can retain a cookie after the server has invalidated its session. The browser may continue sending the identifier, but the server should reject it because the associated session no longer exists or is no longer valid.</p>
+        <p>Conversely, clearing a cookie in the browser does not invalidate a stolen copy held by an attacker. Server-side invalidation is essential.</p>
+        <p>A session cookie without <code>Max-Age</code> or <code>Expires</code> is generally treated as a non-persistent browser cookie, but browser session restoration can complicate assumptions about browser closure.</p>
+        <p>Do not use browser closure as the security mechanism for ending an authenticated session.</p>
+
+        <h3 class="sub-heading">7. Cookie prefixes</h3>
+        <p>Modern browsers support cookie prefixes that enforce additional restrictions.</p>
+        <p>For example, a <code>__Host-</code> cookie must be set with <code>Secure</code>, must have <code>Path=/</code>, and must not specify a <code>Domain</code> attribute.</p>
+        <p>A session cookie using this prefix can help protect against certain subdomain cookie-setting attacks, provided the browser enforces the prefix requirements.</p>
+        <p>Example:</p>
+        <pre><code>Set-Cookie: __Host-SessionID=opaque-value; Path=/; Secure; HttpOnly; SameSite=Lax</code></pre>
+        <p>Whether a framework can be configured to use this exact name depends on the application and container setup. Do not assume that changing the cookie name alone implements the necessary protections. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Reference</a>)</p>
+      </section>
+
+      <!-- SECTION E -->
+      <section id="sec-e">
+        <h2 class="section-heading">E. Session fixation versus session hijacking</h2>
+        <p>These are two different attacks. Understanding the distinction is essential because their primary defenses differ.</p>
+
+        <h3 class="sub-heading">1. Session fixation</h3>
+        <p>In a session-fixation attack, the attacker attempts to make the victim authenticate using a session identifier already known to the attacker.</p>
+        <p>A simplified attack sequence:</p>
+
+        <!-- Mermaid Sequence Diagram 2 -->
+        <div class="diagram-box">
+          <div class="diagram-title">Session Fixation Attack Flow</div>
+          <div class="mermaid">
+sequenceDiagram
+    participant A as Attacker
+    participant V as Victim Browser
+    participant S as Application
+
+    A->>S: Obtain or influence a pre-login session ID
+    S-->>A: Pre-login session ID
+    A->>V: Attempt to make victim use that session ID
+    V->>S: Authenticate using the affected session
+    Note over S: Vulnerable design retains the same session ID
+    A->>S: Reuse the known session ID
+    S-->>A: Potential access to victim's authenticated session
+          </div>
+        </div>
+
+        <p>The attack succeeds only if the attacker can get the victim to use the known identifier and the application fails to replace or otherwise protect the identifier when authentication changes the session's privilege level.</p>
+        <p>The primary defense is to rotate the session identifier when the user authenticates, so the identifier known before login cannot be used to access the authenticated session.</p>
+        <p>Spring Security provides session-fixation protection and supports strategies such as changing the session ID or creating a new session. The framework's behavior depends on its configured strategy and servlet-container capabilities. (<a href="https://docs.spring.io/spring-security/reference/servlet/authentication/session-management.html" target="_blank" rel="noopener noreferrer">Spring Docs</a>)</p>
+
+        <h3 class="sub-heading">2. Session hijacking</h3>
+        <p>In session hijacking, the attacker obtains an already valid session identifier and attempts to use it to impersonate the session owner.</p>
+        <p>Potential sources include:</p>
+        <ul>
+          <li>Session identifiers exposed over unencrypted traffic.</li>
+          <li>Malware or a compromised client.</li>
+          <li>Leakage through application logs or debugging tools.</li>
+          <li>An XSS vulnerability that enables attacker-controlled requests.</li>
+          <li>Improperly scoped cookies or other application vulnerabilities.</li>
+        </ul>
+        <p>A simplified flow:</p>
+
+        <!-- Mermaid Sequence Diagram 3 -->
+        <div class="diagram-box">
+          <div class="diagram-title">Session Hijacking Flow</div>
+          <div class="mermaid">
+sequenceDiagram
+    participant U as Legitimate User
+    participant S as Server
+    participant A as Attacker
+    U->>S: Request with valid session cookie
+    S-->>U: Authorized response
+    Note over A,U: Attacker obtains the session ID
+    A->>S: Request using stolen session ID
+    S->>S: Resolve session and apply security checks
+    S-->>A: Potentially authorized response
+          </div>
+        </div>
+
+        <p>If the server accepts the stolen identifier as a valid authenticated session and no additional control detects the misuse, the attacker may be able to act as the user.</p>
+        <p>The primary defenses include:</p>
+        <ul>
+          <li>Secure, unpredictable session identifiers.</li>
+          <li>HTTPS throughout the authenticated interaction.</li>
+          <li><code>Secure</code> and <code>HttpOnly</code> cookie attributes.</li>
+          <li>Short, appropriate server-side session lifetimes.</li>
+          <li>Session invalidation and renewal at security-sensitive transitions.</li>
+          <li>Detection of suspicious session behavior.</li>
+          <li>Preventing XSS and other vulnerabilities that facilitate session theft.</li>
+        </ul>
+
+        <h3 class="sub-heading">3. Comparison</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Dimension</th>
+                <th>Session fixation</th>
+                <th>Session hijacking</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Attacker's goal</td>
+                <td>Make the victim authenticate with an attacker-known identifier</td>
+                <td>Obtain and reuse a valid session identifier</td>
+              </tr>
+              <tr>
+                <td>Typical timing</td>
+                <td>Before or during authentication</td>
+                <td>After a usable session exists</td>
+              </tr>
+              <tr>
+                <td>Key weakness</td>
+                <td>Session identity is not safely replaced at a privilege transition</td>
+                <td>A valid session credential is exposed or stolen</td>
+              </tr>
+              <tr>
+                <td>Primary defense</td>
+                <td>Session-ID rotation at authentication</td>
+                <td>Protect the identifier, detect misuse and invalidate compromised sessions</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A secure session implementation must defend against both.</p>
+
+        <h3 class="sub-heading">4. Why TLS alone is insufficient</h3>
+        <p>TLS helps prevent network interception of the session identifier, but it does not protect against every way a session can be compromised.</p>
+        <p>For example, a session identifier could be exposed through logs, browser compromise or an application vulnerability even when all traffic uses HTTPS.</p>
+        <p>Similarly, <code>HttpOnly</code> reduces direct cookie access by JavaScript, but does not prevent malicious same-origin script from issuing requests.</p>
+        <p>Session security therefore requires multiple complementary controls.</p>
+      </section>
+
+      <!-- SECTION F -->
+      <section id="sec-f">
+        <h2 class="section-heading">F. Session expiration, logout and invalidation</h2>
+        <p>A session should have a defined lifecycle rather than remain valid indefinitely.</p>
+
+        <h3 class="sub-heading">1. Three important expiration concepts</h3>
+        <p><strong>Idle timeout:</strong> The session expires after a period without qualifying activity.</p>
+        <p><strong>Absolute timeout:</strong> The session expires after a maximum total lifetime, regardless of continued activity.</p>
+        <p><strong>Cookie expiration:</strong> The browser stops retaining or sending the cookie according to its persistence rules.</p>
+        <p>Idle and absolute timeouts are server-side security policies. Cookie expiration is a client-side behavior and cannot replace them.</p>
+        <p>For a financial application, a session might have an idle timeout of 15 minutes and an absolute timeout of several hours. These are illustrative values, not universal recommendations. The appropriate values depend on the sensitivity of the application, expected usage and risk assessment.</p>
+        <p>An idle timeout is useful against abandoned authenticated sessions. An absolute timeout limits how long a continuously used or compromised session can remain valid without reauthentication.</p>
+
+        <h3 class="sub-heading">2. Session lifecycle state machine</h3>
+
+        <!-- Mermaid State Diagram -->
+        <div class="diagram-box">
+          <div class="diagram-title">Session State Transitions</div>
+          <div class="mermaid">
+stateDiagram-v2
+    [*] --> Anonymous
+    Anonymous --> Authenticated: Successful login
+    Authenticated --> Authenticated: Valid request
+    Authenticated --> Expired: Idle or absolute timeout
+    Authenticated --> Invalidated: Logout or administrative revocation
+    Authenticated --> Reauthenticated: Security-sensitive event
+    Reauthenticated --> Authenticated: Verification succeeds
+    Expired --> Anonymous: New login required
+    Invalidated --> Anonymous: New login required
+          </div>
+        </div>
+
+        <p>This is a conceptual state model. An actual application may have more states, such as temporarily restricted accounts or sessions requiring additional verification.</p>
+
+        <h3 class="sub-heading">3. What logout must do</h3>
+        <p>A secure logout should invalidate the session on the server and clear the browser's session cookie.</p>
+        <p>For a Servlet-based application:</p>
+        <pre><code>import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
+public class LogoutService {
+
+    public void logout(
+            HttpServletRequest request,
+            HttpServletResponse response) {
+
+        HttpSession session = request.getSession(false);
+
+        if (session != null) {
+            session.invalidate();
+        }
+
+        var cookie = new jakarta.servlet.http.Cookie(
+                "JSESSIONID", "");
+
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+
+        response.addCookie(cookie);
+    }
+}</code></pre>
+        <p>This illustrates the two operations, but it is not a complete production logout implementation.</p>
+        <p>The cookie-clearing attributes must match the actual cookie's name, path and domain scope. If the application uses a custom cookie name or prefix, the example must be adapted. A production implementation should also account for the application's framework configuration and CSRF requirements.</p>
+        <p>Most importantly, <code>session.invalidate()</code> removes the server-side session from the relevant session implementation. Clearing the cookie tells the browser to stop retaining the corresponding identifier. Both actions serve different purposes.</p>
+
+        <h3 class="sub-heading">4. Logout failure scenarios</h3>
+        <p>Consider the following cases:</p>
+        <ul>
+          <li><strong>Only the cookie is cleared:</strong> A stolen copy of the identifier might still work if the server session remains valid.</li>
+          <li><strong>Only the server session is invalidated:</strong> The browser may continue sending the stale cookie, but the server should reject it.</li>
+          <li><strong>The session store is distributed:</strong> The invalidation must take effect in the shared session-management system, not just in one application instance.</li>
+          <li><strong>The session was already expired:</strong> Logout should still complete safely without assuming that an active session exists.</li>
+        </ul>
+        <p>The security property to test is that the old session identifier cannot be used to access the protected resource after logout.</p>
+      </section>
+
+      <!-- SECTION G -->
+      <section id="sec-g">
+        <h2 class="section-heading">G. Session-ID rotation and security-sensitive transitions</h2>
+        <p>Session identifiers should not remain unchanged across every security transition.</p>
+
+        <h3 class="sub-heading">1. Why rotate after login?</h3>
+        <p>Before authentication, an application may maintain anonymous state, such as a shopping cart or navigation preferences.</p>
+        <p>After successful authentication, the session becomes associated with an authenticated identity. This is a change in privilege level.</p>
+        <p>If the identifier remains attacker-known, the application may be vulnerable to session fixation.</p>
+        <p>The correct behavior is to rotate the session identifier or use an appropriate session-fixation protection strategy.</p>
+
+        <h3 class="sub-heading">2. Spring Security strategies</h3>
+        <p>Spring Security supports session-fixation strategies including:</p>
+        <ul>
+          <li><code>changeSessionId</code>: Change the identifier while retaining the session and its attributes, using servlet-container support.</li>
+          <li><code>newSession</code>: Create a clean session, retaining the relevant Spring Security-related attributes but not generally copying arbitrary existing session attributes.</li>
+          <li><code>migrateSession</code>: Create a new session and migrate the previous session attributes.</li>
+        </ul>
+        <p>The default strategy depends on the servlet-container capabilities and Spring Security configuration. For modern Servlet 3.1+ containers, <code>changeSessionId</code> is the standard default behavior in Spring Security's session-fixation protection configuration. (<a href="https://docs.spring.io/spring-security/reference/servlet/authentication/session-management.html" target="_blank" rel="noopener noreferrer">Spring Docs</a>)</p>
+        <p>The correct strategy depends on what the application stores in the pre-authentication session and whether that data should survive login.</p>
+
+        <h3 class="sub-heading">3. When else might rotation or reauthentication be needed?</h3>
+        <p>Consider security-sensitive events such as:</p>
+        <ul>
+          <li>A user changes their password.</li>
+          <li>A user completes account recovery.</li>
+          <li>An administrator elevates privileges.</li>
+          <li>The application detects a compromised session.</li>
+          <li>The user changes important account-security settings.</li>
+        </ul>
+        <p>Depending on the application, these events may require session renewal, invalidation of other sessions or reauthentication.</p>
+        <p>Do not blindly invalidate all sessions for every low-risk profile change. Define the security policy based on the consequences of compromise and the application's usability requirements.</p>
+      </section>
+
+      <!-- SECTION H -->
+      <section id="sec-h">
+        <h2 class="section-heading">H. Concurrent sessions and session limits</h2>
+        <p>A user may sign in from multiple browsers, devices or application instances. Session management must define whether those sessions are allowed to coexist.</p>
+
+        <h3 class="sub-heading">1. Common policies</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Policy</th>
+                <th>Behavior</th>
+                <th>Trade-off</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Unlimited concurrent sessions</td>
+                <td>Each login can create another session</td>
+                <td>Convenient, but more active credentials may remain exposed</td>
+              </tr>
+              <tr>
+                <td>One active session per user</td>
+                <td>A new login may invalidate an older session</td>
+                <td>Limits simultaneous use, but can disrupt legitimate users</td>
+              </tr>
+              <tr>
+                <td>Maximum <code>N</code> sessions</td>
+                <td>Allows a bounded number of active sessions</td>
+                <td>Balances convenience and exposure</td>
+              </tr>
+              <tr>
+                <td>Device/session management</td>
+                <td>Lets users inspect and revoke sessions</td>
+                <td>More complex but provides useful control</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A financial application might allow a customer to use a laptop and mobile device simultaneously while limiting unusually large numbers of concurrent sessions.</p>
+
+        <h3 class="sub-heading">2. The implementation challenge</h3>
+        <p>Suppose the application runs on three instances:</p>
+        <pre><code>                Load Balancer
+                /     |     \
+           App A    App B    App C
+                \     |     /
+                 Shared Session Store</code></pre>
+        <p>If session limits are maintained only in each application's local memory, App A may believe a user has one session while App B independently creates another.</p>
+        <p>To enforce a global session limit, the design needs shared session-management state or another mechanism that coordinates concurrent logins.</p>
+
+        <h3 class="sub-heading">3. Race conditions</h3>
+        <p>Imagine the policy permits only one active session.</p>
+        <p>Two login requests arrive simultaneously:</p>
+        <ol>
+          <li>Request A checks that no session exists.</li>
+          <li>Request B checks the same state.</li>
+          <li>Both create sessions.</li>
+          <li>Both believe they have complied with the policy.</li>
+        </ol>
+        <p>A correct design needs atomic coordination or a suitable concurrency strategy. Depending on the implementation, this may involve transactional storage, a distributed coordination mechanism or framework-supported concurrent-session control.</p>
+        <p>A local <code>synchronized</code> block is not sufficient to coordinate multiple independent application processes.</p>
+
+        <h3 class="sub-heading">4. Spring Security support</h3>
+        <p>Spring Security supports concurrent-session control through its session-management features. The exact configuration requires appropriate session lifecycle integration, including event handling in some setups. (<a href="https://docs.spring.io/spring-security/reference/servlet/authentication/session-management.html" target="_blank" rel="noopener noreferrer">Spring Docs</a>)</p>
+        <p>For this topic, the essential principle is that session limits are application-wide policies, not merely per-process counters.</p>
+        <p>Detailed framework architecture and configuration belong to Topic 4.</p>
+      </section>
+
+      <!-- SECTION I -->
+      <section id="sec-i">
+        <h2 class="section-heading">I. Session storage: in-memory versus Redis</h2>
+        <p>The session store determines where authoritative session state lives and how the application retrieves, updates and invalidates it.</p>
+
+        <h3 class="sub-heading">1. In-memory sessions</h3>
+        <p>A simple deployment may use the servlet container's in-memory session storage.</p>
+        <p><strong>Advantages:</strong></p>
+        <ul>
+          <li>Low-latency access.</li>
+          <li>Minimal additional infrastructure.</li>
+          <li>Straightforward development and debugging.</li>
+        </ul>
+        <p><strong>Disadvantages:</strong></p>
+        <ul>
+          <li>Session state may be lost on restart.</li>
+          <li>Other application instances may not share the state.</li>
+          <li>Large session populations consume application memory.</li>
+          <li>Deployments and failovers can disrupt active sessions.</li>
+        </ul>
+        <p>This can be appropriate for development or a small single-instance application with acceptable session-loss behavior.</p>
+
+        <h3 class="sub-heading">2. Distributed sessions with Redis</h3>
+        <p>A distributed session design stores session state in a shared store, such as Redis, so that multiple application instances can access the same logical session.</p>
+
+        <div class="callout callout-blue">
+          <h4>Browser</h4>
+          <p>Carries session identifier</p>
+          <h4 style="margin-top: 10px;">Application A &middot; Application B</h4>
+          <p>Request processing</p>
+          <h4 style="margin-top: 10px;">Shared session store</h4>
+          <p>Lookup, update, expiry and invalidation</p>
+        </div>
+
+        <p><strong>Advantages:</strong></p>
+        <ul>
+          <li>Session state can be shared across instances.</li>
+          <li>Application restarts need not destroy all sessions if the store retains the data.</li>
+          <li>Session management can scale independently of individual application processes.</li>
+        </ul>
+        <p><strong>Trade-offs:</strong></p>
+        <ul>
+          <li>Additional network latency.</li>
+          <li>Dependency failures can affect authenticated requests.</li>
+          <li>Serialization and session-schema changes require care.</li>
+          <li>The store becomes security-sensitive infrastructure.</li>
+          <li>Availability, eviction policies and capacity planning affect session behavior.</li>
+        </ul>
+
+        <h3 class="sub-heading">3. Session-store security</h3>
+        <p>A shared store contains authentication-related state and must be protected accordingly.</p>
+        <p>Consider:</p>
+        <ul>
+          <li>Restricting network access.</li>
+          <li>Using appropriate authentication and transport protection.</li>
+          <li>Limiting service privileges.</li>
+          <li>Avoiding sensitive values in session attributes.</li>
+          <li>Defining expiration and eviction behavior.</li>
+          <li>Protecting backups and administrative access.</li>
+          <li>Monitoring unexpected session creation, deletion or lookup failures.</li>
+        </ul>
+        <p>Do not assume that Redis is safe merely because it is on a private network.</p>
+
+        <h3 class="sub-heading">4. What happens if Redis is unavailable?</h3>
+        <p>The correct behavior depends on the operation and security requirements.</p>
+        <p>For a protected request, if the application cannot determine whether the presented session is valid, it must not silently treat the request as authenticated.</p>
+        <p>A fail-closed policy may reject the request temporarily. This can reduce availability, so the application should also have timeouts, sensible dependency-failure handling and operational monitoring.</p>
+        <p>Do not automatically fall back to trusting a session identifier or a stale unauthenticated cache when the authoritative store is unavailable.</p>
+
+        <h3 class="sub-heading">5. Session expiration and consistency</h3>
+        <p>A distributed session store must ensure that expiration and invalidation behave consistently enough for the application's security requirements.</p>
+        <p>For example, if an administrator revokes a session, the system should define how quickly every application instance must stop accepting it.</p>
+        <p>The design should account for:</p>
+        <ul>
+          <li>Store-level expiration.</li>
+          <li>Application-level session timeouts.</li>
+          <li>Cache invalidation.</li>
+          <li>Concurrent updates.</li>
+          <li>Temporary store failures.</li>
+          <li>Deployment and schema changes.</li>
+        </ul>
+        <p>Sticky sessions at the load balancer may reduce some cross-instance traffic, but they do not eliminate the need to consider failover, invalidation and application restarts.</p>
+      </section>
+
+      <!-- SECTION J -->
+      <section id="sec-j">
+        <h2 class="section-heading">J. CSRF protection for cookie-based authentication</h2>
+        <p>Cookie-based authentication creates an important browser-security consideration.</p>
+        <p>Browsers automatically attach applicable cookies to requests. This is useful because the user does not need to manually attach the session identifier to every request. However, it also means a malicious site may be able to trigger certain requests using the victim's existing authenticated browser context.</p>
+        <p>This is the basis of cross-site request forgery (CSRF).</p>
+
+        <h3 class="sub-heading">1. Example attack</h3>
+        <p>Suppose a customer is signed in to a financial application and the application has an endpoint that changes an account setting.</p>
+        <p>A malicious website attempts to cause the customer's browser to submit a request to that endpoint. If the browser sends the authentication cookie and the server accepts the request without adequate CSRF defenses, an unintended operation may succeed.</p>
+        <p>The attacker may not need to read the application's response. Causing the authenticated browser to submit the action can be enough.</p>
+
+        <h3 class="sub-heading">2. Why a session cookie does not prove user intent</h3>
+        <p>The session cookie establishes the browser's authenticated context, assuming the server validates it.</p>
+        <p>It does not, by itself, prove that the user intentionally initiated the current request.</p>
+        <p>These are separate questions:</p>
+        <ul>
+          <li>Is the request associated with an authenticated session?</li>
+          <li>Was the state-changing request initiated through an acceptable interaction or protected request flow?</li>
+        </ul>
+        <p>A secure design must address both.</p>
+
+        <h3 class="sub-heading">3. Main CSRF defenses</h3>
+        <p>For session-based applications, common defenses include:</p>
+        <ul>
+          <li>CSRF tokens that the application verifies on state-changing requests.</li>
+          <li>Appropriate <code>SameSite</code> cookie attributes.</li>
+          <li>Origin or Referer validation where suitable.</li>
+          <li>Ensuring that safe HTTP methods such as <code>GET</code> do not change application state.</li>
+          <li>Appropriate request design and content-type handling.</li>
+        </ul>
+        <p>OWASP recommends using CSRF tokens for state-changing operations in applications that rely on automatically attached browser credentials, with additional defenses selected according to the deployment. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Reference</a>)</p>
+
+        <h3 class="sub-heading">4. CSRF tokens: conceptual flow</h3>
+        <p>A CSRF token is an additional value used to verify that a request came through an acceptable application flow.</p>
+        <p>Conceptually:</p>
+
+        <!-- Mermaid Sequence Diagram 4 -->
+        <div class="diagram-box">
+          <div class="diagram-title">CSRF Token Verification Flow</div>
+          <div class="mermaid">
+sequenceDiagram
+    participant B as Browser
+    participant A as Application
+    B->>A: Request form or protected page
+    A-->>B: Page and CSRF token
+    B->>A: State-changing request with cookie and token
+    A->>A: Validate session and CSRF token
+    alt Valid request
+        A-->>B: Process operation
+    else Invalid or missing token
+        A-->>B: Reject request
+    end
+          </div>
+        </div>
+
+        <p>This is a conceptual diagram, not a complete CSRF implementation. Token generation, storage and comparison depend on the application's framework and deployment model.</p>
+
+        <h3 class="sub-heading">5. What <code>SameSite</code> does and does not do</h3>
+        <p><code>SameSite</code> restricts cookie sending in certain cross-site contexts. It can substantially reduce CSRF risk.</p>
+        <p>But it is not a universal substitute for a CSRF token:</p>
+        <ul>
+          <li>Some cross-site top-level navigations may still send cookies under <code>Lax</code>.</li>
+          <li>Same-site subdomains may not be isolated as an application developer expects.</li>
+          <li>Browser behavior and deployment details matter.</li>
+          <li>State-changing operations exposed through <code>GET</code> create additional risk.</li>
+        </ul>
+        <p>For a sensitive application, combine an appropriate cookie policy with a deliberate CSRF defense and tests for state-changing endpoints.</p>
+
+        <h3 class="sub-heading">6. When does CSRF matter?</h3>
+        <p>It is especially relevant when the browser automatically attaches authentication credentials, as with ordinary session cookies.</p>
+        <p>A system using a different credential-transport design may have a different CSRF threat model, but it still needs to evaluate how credentials are supplied and how requests are authorized.</p>
+        <p>The important rule for this topic is that session-based authentication and CSRF protection must be designed together.</p>
+      </section>
+
+      <!-- SECTION K -->
+      <section id="sec-k">
+        <h2 class="section-heading">K. Practical Java and Spring Boot implementation</h2>
+        <p>We will build a small session-based account system that demonstrates:</p>
+        <ol>
+          <li>Verifying credentials using the password encoder from Topic 2.</li>
+          <li>Creating authenticated session state.</li>
+          <li>Restricting a protected endpoint.</li>
+          <li>Logging out by invalidating the server-side session.</li>
+          <li>Configuring cookie and session-expiration properties.</li>
+          <li>Testing that an old session cannot be reused after logout.</li>
+        </ol>
+
+        <div class="callout callout-amber">
+          <h4>Implementation boundary</h4>
+          <p>To keep this topic focused on the session lifecycle rather than Topic 4's Spring Security architecture, the first example uses the Servlet API and a Spring MVC interceptor to demonstrate session handling. This is an educational example of the mechanics, not a recommendation to build custom authentication infrastructure for a production financial application. In production, use Spring Security's supported authentication, session-fixation protection, CSRF protection and authorization mechanisms.</p>
+        </div>
+
+        <h3 class="sub-heading">1. Project components</h3>
+        <pre><code>com.example.sessiondemo
+├── config
+│   └── SessionConfig.java
+├── controller
+│   └── AccountController.java
+├── dto
+│   ├── LoginRequest.java
+│   └── AccountResponse.java
+├── security
+│   └── SessionAuthenticationInterceptor.java
+└── service
+    └── AccountService.java</code></pre>
+        <p>The user repository and password encoder are reused from Topic 2.</p>
+
+        <h3 class="sub-heading">2. Configure the session cookie and timeout</h3>
+        <p>In <code>application.properties</code>:</p>
+        <pre><code>server.servlet.session.timeout=15m
+server.servlet.session.cookie.http-only=true
+server.servlet.session.cookie.secure=true
+server.servlet.session.cookie.same-site=lax</code></pre>
+        <p>These settings illustrate a production-oriented HTTPS configuration.</p>
+        <ul>
+          <li>The session timeout controls the container-managed inactivity timeout.</li>
+          <li><code>HttpOnly</code> restricts JavaScript access to the session cookie.</li>
+          <li><code>Secure</code> restricts cookie transmission to secure connections.</li>
+          <li><code>SameSite=Lax</code> provides a useful baseline for many browser applications.</li>
+        </ul>
+        <p>Use an HTTPS deployment when <code>Secure</code> is enabled. Local development over plain HTTP may require a separate development-only configuration; do not disable the production setting merely to make local testing convenient.</p>
+        <p>Also note that a container's session timeout does not necessarily enforce an independent absolute session lifetime. An absolute timeout requires an additional policy and implementation.</p>
+
+        <h3 class="sub-heading">3. Define the login request</h3>
+        <pre><code>package com.example.sessiondemo.dto;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
+public record LoginRequest(
+        @NotBlank @Email String email,
+        @NotBlank String password
+) {}</code></pre>
+        <p>The password is accepted only as request data for verification. It must not be stored in the session.</p>
+
+        <h3 class="sub-heading">4. Establish session state after password verification</h3>
+        <p>The service should use the existing account repository and <code>PasswordEncoder</code> from Topic 2.</p>
+        <pre><code>package com.example.sessiondemo.service;
+
+import com.example.account.entity.User;
+import com.example.account.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+@Service
+public class AccountService {
+
+    private final UserRepository users;
+    private final PasswordEncoder passwordEncoder;
+
+    public AccountService(
+            UserRepository users,
+            PasswordEncoder passwordEncoder) {
+        this.users = users;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public Long verifyCredentials(String email, String password) {
+        User user = users.findByEmail(email)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        if (!passwordEncoder.matches(
+                password, user.getPasswordHash())) {
+            throw new InvalidCredentialsException();
+        }
+
+        return user.getId();
+    }
+}</code></pre>
+        <p>The <code>InvalidCredentialsException</code> is the same type of application-defined exception introduced in Topic 2.</p>
+        <p>This service returns the stable user ID only after successful password verification. It does not create a session or decide which resources the user may access.</p>
+
+        <h3 class="sub-heading">5. Rotate the session identifier at login</h3>
+        <p>For a Servlet-based demonstration, <code>HttpServletRequest.changeSessionId()</code> can rotate the identifier of an existing session. On a modern Servlet container, this is preferable to retaining an attacker-known pre-authentication identifier.</p>
+        <pre><code>package com.example.sessiondemo.controller;
+
+import com.example.sessiondemo.dto.LoginRequest;
+import com.example.sessiondemo.service.AccountService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api")
+public class AccountController {
+
+    private final AccountService accountService;
+
+    public AccountController(AccountService accountService) {
+        this.accountService = accountService;
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity&lt;Void&gt; login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
+
+        Long userId = accountService.verifyCredentials(
+                request.email(), request.password());
+
+        HttpSession session = httpRequest.getSession(true);
+
+        // Rotate the identifier before storing authenticated state.
+        httpRequest.changeSessionId();
+
+        session.setAttribute("authenticatedUserId", userId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity&lt;Void&gt; logout(
+            HttpServletRequest httpRequest) {
+
+        HttpSession session = httpRequest.getSession(false);
+
+        if (session != null) {
+            session.invalidate();
+        }
+
+        return ResponseEntity.noContent().build();
+    }
+}</code></pre>
+        <p>This illustrates the essential lifecycle, but it omits some important production details:</p>
+        <ul>
+          <li>Session creation and rotation should be coordinated with the authentication mechanism.</li>
+          <li>Cookie clearing and cookie scope must be handled consistently.</li>
+          <li>Login and logout endpoints must have an appropriate CSRF policy.</li>
+          <li>Authentication failures must return generic public errors.</li>
+          <li>Session expiry, concurrent logins and session-store behavior need explicit policies.</li>
+        </ul>
+        <p>Spring Security provides session-fixation protection as part of its supported authentication flow, so production code should prefer the framework's mechanism rather than relying on custom controller code.</p>
+
+        <h3 class="sub-heading">6. Restrict a protected endpoint</h3>
+        <p>An interceptor can demonstrate how a request retrieves authenticated state from an existing session.</p>
+        <pre><code>package com.example.sessiondemo.security;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+
+@Component
+public class SessionAuthenticationInterceptor
+        implements HandlerInterceptor {
+
+    @Override
+    public boolean preHandle(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler) throws Exception {
+
+        HttpSession session = request.getSession(false);
+
+        Object userId = session == null
+                ? null
+                : session.getAttribute("authenticatedUserId");
+
+        if (!(userId instanceof Long)) {
+            response.setStatus(
+                    HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
+        }
+
+        return true;
+    }
+}</code></pre>
+
+        <p>Register the interceptor for the protected route:</p>
+        <pre><code>package com.example.sessiondemo.config;
+
+import com.example.sessiondemo.security
+        .SessionAuthenticationInterceptor;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation
+        .InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation
+        .WebMvcConfigurer;
+
+@Configuration
+public class SessionConfig implements WebMvcConfigurer {
+
+    private final SessionAuthenticationInterceptor interceptor;
+
+    public SessionConfig(
+            SessionAuthenticationInterceptor interceptor) {
+        this.interceptor = interceptor;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(interceptor)
+                .addPathPatterns("/api/protected/**")
+                .excludePathPatterns("/api/login", "/api/logout");
+    }
+}</code></pre>
+
+        <p>For demonstration, create a protected endpoint:</p>
+        <pre><code>package com.example.sessiondemo.controller;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/protected")
+public class PortfolioController {
+
+    @GetMapping("/portfolio")
+    public Map&lt;String, Object&gt; portfolio(
+            HttpServletRequest request) {
+
+        HttpSession session = request.getSession(false);
+
+        Long userId = (Long) session.getAttribute(
+                "authenticatedUserId");
+
+        return Map.of(
+                "userId", userId,
+                "message", "Authenticated session found"
+        );
+    }
+}</code></pre>
+        <p>This endpoint demonstrates the session lookup. It does not implement resource-level authorization or return real portfolio data. Those checks must be performed separately, and detailed authorization design belongs to Topic 5.</p>
+        
+        <div class="callout callout-rose">
+          <h4>Production warning</h4>
+          <p>A custom MVC interceptor is not a complete substitute for Spring Security. It can be bypassed by incorrect route configuration, may not cover every relevant request path and does not provide the framework's complete authentication, CSRF or security-context behavior. Do not deploy this educational implementation as a production authentication solution without replacing it with a properly configured security framework.</p>
+        </div>
+
+        <h3 class="sub-heading">7. What happens on each request?</h3>
+        <p>For the protected portfolio endpoint:</p>
+        <ol>
+          <li>The browser sends the session cookie.</li>
+          <li>The servlet container resolves the session.</li>
+          <li>The interceptor retrieves the existing session without creating a new one.</li>
+          <li>The interceptor checks for the expected authenticated-state attribute.</li>
+          <li>If the state is absent, the request is rejected.</li>
+          <li>If the state exists, the controller executes.</li>
+          <li>The application performs the appropriate business and resource-authorization checks.</li>
+        </ol>
+        <p>This demonstrates the key session concept: the cookie carries the identifier; the server-side session carries the authentication-related state.</p>
+      </section>
+
+      <!-- SECTION L -->
+      <section id="sec-l">
+        <h2 class="section-heading">L. Request walkthroughs and failure scenarios</h2>
+
+        <h3 class="sub-heading">1. Successful login</h3>
+        <p>Request:</p>
+        <pre><code>POST /api/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "Example-Password-For-Testing"
+}</code></pre>
+        <p>Assuming valid credentials, the application verifies the password, creates or retrieves the session, rotates the session ID, and associates the authenticated user ID with the session.</p>
+        <p>The response should set or update the session cookie through the servlet container.</p>
+        <p>Subsequent requests carry that cookie, allowing the application to retrieve the corresponding server-side session.</p>
+
+        <h3 class="sub-heading">2. Request without a session</h3>
+        <pre><code>GET /api/protected/portfolio</code></pre>
+        <p>If there is no authenticated session, the interceptor returns <code>401 Unauthorized</code>.</p>
+        <p>The request must not trigger a new authenticated session merely because the caller requests a protected resource.</p>
+
+        <h3 class="sub-heading">3. Request with an expired session</h3>
+        <p>The browser might still send an old cookie after the server-side session has expired.</p>
+        <p>The server should reject the request because the identifier no longer resolves to a valid authenticated session.</p>
+        <p>Depending on the framework and configuration, the response may be <code>401</code>, a redirect to login, or another documented outcome.</p>
+
+        <h3 class="sub-heading">4. Request after logout</h3>
+        <p>After logout, the server invalidates the session.</p>
+        <p>Even if the client manually resends the old cookie, the application should not restore the old authenticated state. This is a critical negative test.</p>
+
+        <h3 class="sub-heading">5. Session store unavailable</h3>
+        <p>If the application uses a shared session store and that store becomes unavailable, the application may be unable to validate the session.</p>
+        <p>For protected operations, the application must not bypass the check and proceed as authenticated without reliable evidence. It should fail safely and expose an appropriate service error.</p>
+
+        <h3 class="sub-heading">6. Session ID supplied through an unexpected mechanism</h3>
+        <p>If an application accepts session identifiers from URL parameters or other unexpected locations, an attacker may be able to manipulate the identifier or expose it through logs, browser history or referrer information.</p>
+        <p>A session-based application should define and enforce an accepted session-ID transport mechanism, normally cookies, and test that alternative mechanisms are not inadvertently accepted. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Reference</a>)</p>
+      </section>
+
+      <!-- SECTION M -->
+      <section id="sec-m">
+        <h2 class="section-heading">M. Testing and verification</h2>
+        <p>Session tests should establish that authenticated state persists when appropriate, changes when required, and cannot be reused after invalidation.</p>
+
+        <h3 class="sub-heading">1. Session test matrix</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Test</th>
+                <th>Expected result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Valid login</td>
+                <td>Session becomes associated with the authenticated user</td>
+              </tr>
+              <tr>
+                <td>Invalid password</td>
+                <td>No authenticated session is established</td>
+              </tr>
+              <tr>
+                <td>Protected endpoint without session</td>
+                <td>Request is rejected</td>
+              </tr>
+              <tr>
+                <td>Protected endpoint with valid session</td>
+                <td>Request passes the authentication check</td>
+              </tr>
+              <tr>
+                <td>Session ID changes after login</td>
+                <td>Pre-authentication identifier cannot access the authenticated session</td>
+              </tr>
+              <tr>
+                <td>Logout</td>
+                <td>Server-side session is invalidated</td>
+              </tr>
+              <tr>
+                <td>Old cookie after logout</td>
+                <td>Request is rejected</td>
+              </tr>
+              <tr>
+                <td>Expired session</td>
+                <td>Request is rejected or redirected according to policy</td>
+              </tr>
+              <tr>
+                <td>Concurrent session policy</td>
+                <td>Behavior matches the configured limit</td>
+              </tr>
+              <tr>
+                <td>CSRF-protected state-changing request without valid token</td>
+                <td>Request is rejected</td>
+              </tr>
+              <tr>
+                <td>Shared-store outage</td>
+                <td>Protected request does not silently bypass session validation</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub-heading">2. Example integration-test outline</h3>
+        <p>A full Spring Boot integration test should use the actual session configuration and HTTP test client. The following is a test plan rather than a complete test class:</p>
+        <pre><code>Test: loginCreatesAuthenticatedSession
+
+1. Submit valid credentials to POST /api/login.
+2. Capture the session cookie from the response.
+3. Call GET /api/protected/portfolio with the cookie.
+4. Assert the protected endpoint succeeds.
+5. Assert the response corresponds to the authenticated test user.</code></pre>
+
+        <p>A second test should prove invalidation:</p>
+        <pre><code>Test: logoutInvalidatesExistingSession
+
+1. Log in and capture the session cookie.
+2. Call POST /api/logout with the required request protections.
+3. Assert logout succeeds.
+4. Replay the old session cookie.
+5. Assert the protected endpoint rejects the request.</code></pre>
+        <p>For production, these tests should exercise the actual Spring Security configuration rather than only a custom interceptor.</p>
+
+        <h3 class="sub-heading">3. Testing session-ID rotation</h3>
+        <p>The important assertion is not simply that a cookie exists after login. It is that the authenticated session is no longer accessible through the pre-authentication identifier.</p>
+        <p>Test the pre-login identifier against the protected endpoint after authentication. It must not grant access to the authenticated session.</p>
+
+        <h3 class="sub-heading">4. Testing cookie attributes</h3>
+        <p>Inspect actual <code>Set-Cookie</code> response headers in an integration or deployment test.</p>
+        <p>Verify that:</p>
+        <ul>
+          <li><code>Secure</code> is present in production.</li>
+          <li><code>HttpOnly</code> is present.</li>
+          <li><code>SameSite</code> matches the intended policy.</li>
+          <li><code>Domain</code> is absent unless sharing is required.</li>
+          <li><code>Path</code> is appropriate.</li>
+          <li>Cookie expiration aligns with the documented client-side policy.</li>
+        </ul>
+        <p>Do not infer the production cookie configuration solely from a property file. Proxies, container settings and framework configuration may affect the final response.</p>
+      </section>
+
+      <!-- SECTION N -->
+      <section id="sec-n">
+        <h2 class="section-heading">N. Production readiness</h2>
+
+        <h3 class="sub-heading">1. Session-security checklist</h3>
+        <h4>Production review (0/14)</h4>
+
+        <div class="callout callout-blue" style="margin-top: 12px;">
+          <h4 style="margin-bottom: 8px;">Session identity</h4>
+          <ul class="checklist">
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s1">
+              <label for="chk-s1">Session IDs are unpredictable and contain no sensitive information</label>
+            </li>
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s2">
+              <label for="chk-s2">Session IDs rotate after authentication or relevant privilege changes</label>
+            </li>
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s3">
+              <label for="chk-s3">Session IDs are accepted only through the intended transport mechanism</label>
+            </li>
+          </ul>
+
+          <h4 style="margin-bottom: 8px; margin-top: 14px;">Cookie protection</h4>
+          <ul class="checklist">
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s4">
+              <label for="chk-s4">HTTPS is used throughout authenticated interactions</label>
+            </li>
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s5">
+              <label for="chk-s5">Session cookies use Secure and HttpOnly</label>
+            </li>
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s6">
+              <label for="chk-s6">SameSite, Path and Domain match the application's security policy</label>
+            </li>
+          </ul>
+
+          <h4 style="margin-bottom: 8px; margin-top: 14px;">Lifecycle</h4>
+          <ul class="checklist">
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s7">
+              <label for="chk-s7">Idle and absolute timeout policies are defined</label>
+            </li>
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s8">
+              <label for="chk-s8">Logout invalidates the server-side session</label>
+            </li>
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s9">
+              <label for="chk-s9">Expired or revoked sessions cannot be reused</label>
+            </li>
+          </ul>
+
+          <h4 style="margin-bottom: 8px; margin-top: 14px;">Storage and scaling</h4>
+          <ul class="checklist">
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s10">
+              <label for="chk-s10">Session storage is protected and capacity-planned</label>
+            </li>
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s11">
+              <label for="chk-s11">Multi-instance invalidation and concurrent-login behavior are tested</label>
+            </li>
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s12">
+              <label for="chk-s12">Dependency failures do not bypass authentication</label>
+            </li>
+          </ul>
+
+          <h4 style="margin-bottom: 8px; margin-top: 14px;">Monitoring</h4>
+          <ul class="checklist">
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s13">
+              <label for="chk-s13">Session creation, renewal, expiry and revocation can be investigated</label>
+            </li>
+            <li class="checklist-item">
+              <input type="checkbox" id="chk-s14">
+              <label for="chk-s14">Raw session IDs and sensitive credentials are excluded from logs</label>
+            </li>
+          </ul>
+        </div>
+
+        <h3 class="sub-heading">2. Logging and observability</h3>
+        <p>Useful session lifecycle events include:</p>
+        <ul>
+          <li>Session creation.</li>
+          <li>Authentication and session-ID rotation.</li>
+          <li>Logout and invalidation.</li>
+          <li>Timeout expiration.</li>
+          <li>Rejected requests involving invalid session identifiers.</li>
+          <li>Administrative session revocation.</li>
+          <li>Session-store failures.</li>
+        </ul>
+        <p>Logs should support investigation without exposing raw session identifiers. Where session-level correlation is needed, use a carefully designed non-reversible correlation value rather than logging the credential itself.</p>
+        <p>Protect the logs and any administrative interfaces that can inspect or revoke active sessions.</p>
+
+        <h3 class="sub-heading">3. Recovery planning</h3>
+        <p>A production application should define how to respond to:</p>
+        <ul>
+          <li>A suspected stolen session.</li>
+          <li>A compromised browser or device.</li>
+          <li>A session-store outage.</li>
+          <li>Incorrect cookie attributes after deployment.</li>
+          <li>An accidental mass logout.</li>
+          <li>A vulnerability that requires invalidating active sessions.</li>
+        </ul>
+        <p>For a suspected compromise, the system should be able to revoke affected sessions server-side. Merely asking users to clear their browser cookies is insufficient.</p>
+      </section>
+
+      <!-- SECTION O -->
+      <section id="sec-o">
+        <h2 class="section-heading">O. How a Senior Engineer Thinks About This</h2>
+        <p>An experienced engineer does not select session settings by copying a configuration snippet. They identify the application's security requirements and understand how each setting affects the session lifecycle.</p>
+
+        <h3 class="sub-heading">1. Design-review questions</h3>
+        <p>Before approving a session-based application, ask:</p>
+        <ol>
+          <li><strong>Session identity:</strong> Is the session ID sufficiently unpredictable, and does it reveal anything sensitive?</li>
+          <li><strong>Authentication transition:</strong> Is the session identifier rotated when authentication succeeds?</li>
+          <li><strong>Cookie policy:</strong> Are <code>Secure</code>, <code>HttpOnly</code>, <code>SameSite</code>, <code>Path</code> and <code>Domain</code> configured deliberately?</li>
+          <li><strong>Expiration:</strong> Is there an explicit server-side idle timeout and, where needed, an absolute timeout?</li>
+          <li><strong>Logout:</strong> Does logout invalidate server-side state, including in a distributed deployment?</li>
+          <li><strong>Concurrency:</strong> Can two simultaneous login requests violate a session limit?</li>
+          <li><strong>Scaling:</strong> Can every application instance validate and invalidate the same session correctly?</li>
+          <li><strong>CSRF:</strong> Can an attacker cause a victim's browser to initiate a state-changing request?</li>
+          <li><strong>Observability:</strong> Can engineers investigate session abuse without logging session credentials?</li>
+          <li><strong>Recovery:</strong> Can the application revoke sessions after a suspected compromise?</li>
+        </ol>
+
+        <h3 class="sub-heading">2. Common architectural mistakes</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Mistake</th>
+                <th>Why it is dangerous</th>
+                <th>Better approach</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Treating the cookie as the session itself</td>
+                <td>Confuses client-side reference with server-side state</td>
+                <td>Keep authoritative session state server-side</td>
+              </tr>
+              <tr>
+                <td>Keeping the same ID after login</td>
+                <td>Can enable session fixation</td>
+                <td>Use session-fixation protection</td>
+              </tr>
+              <tr>
+                <td>Clearing only the browser cookie on logout</td>
+                <td>A stolen copy may remain usable</td>
+                <td>Invalidate the server-side session</td>
+              </tr>
+              <tr>
+                <td>Relying on browser closure for expiry</td>
+                <td>Browser restoration can preserve cookies</td>
+                <td>Enforce server-side expiration</td>
+              </tr>
+              <tr>
+                <td>Storing sessions only in one process in a multi-instance system</td>
+                <td>Other instances may not recognize the session</td>
+                <td>Use a suitable shared session-management design</td>
+              </tr>
+              <tr>
+                <td>Treating <code>SameSite</code> as complete CSRF protection</td>
+                <td>Some cross-site and same-site attack scenarios remain</td>
+                <td>Apply a deliberate CSRF policy</td>
+              </tr>
+              <tr>
+                <td>Logging raw session IDs</td>
+                <td>Logs become a source of credential theft</td>
+                <td>Use safe session-event logging and non-reversible correlation</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub-heading">3. The most important architectural decision</h3>
+        <p>The key trade-off is not simply whether sessions are old-fashioned or modern. It is whether the session architecture fits the application's requirements.</p>
+        <p>For a conventional web application, server-side sessions offer centralized control over authenticated state and straightforward server-side invalidation.</p>
+        <p>However, they introduce state-management responsibilities, especially when multiple instances must share sessions and honor revocation consistently.</p>
+        <p>The right choice depends on operational constraints, application architecture, security requirements and the expected user experience.</p>
+      </section>
+
+      <!-- SECTION P -->
+      <section id="sec-p">
+        <h2 class="section-heading">P. Interview and design-review preparation</h2>
+        <p>Use the questions below to check your understanding. Expand each one to review the reasoning.</p>
+        <ol>
+          <li>Why are sessions needed if HTTP already supports cookies?</li>
+          <li>What is the difference between a session ID and session data?</li>
+          <li>What is session fixation?</li>
+          <li>What is session hijacking?</li>
+          <li>Why is HttpOnly not enough to prevent XSS-related session abuse?</li>
+          <li>Why is Secure necessary if the application already redirects HTTP to HTTPS?</li>
+          <li>What is the difference between cookie expiration and session expiration?</li>
+          <li>Why might SameSite=Lax be insufficient for CSRF protection?</li>
+          <li>How do you enforce one active session per user across multiple instances?</li>
+          <li>What happens if Redis becomes unavailable?</li>
+          <li>Why is invalidating the server-side session essential during logout?</li>
+          <li>What is the difference between idle and absolute timeout?</li>
+          <li>Why should session IDs not be logged?</li>
+          <li>Why should a production application prefer Spring Security over a hand-written session interceptor?</li>
+        </ol>
+      </section>
+
+      <!-- SECTION Q -->
+      <section id="sec-q">
+        <h2 class="section-heading">Q. Hands-on exercise — Session-Based Authentication</h2>
+        <div class="callout callout-emerald">
+          <p style="text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; font-weight: 700; color: var(--accent-emerald);">Practical assignment</p>
+          <h3 style="color: #fff; margin: 4px 0 10px 0;">Build a session-based portfolio API</h3>
+          <p>Create a Java/Spring Boot application in which a customer logs in, accesses a protected endpoint and logs out by invalidating the server-side session.</p>
+        </div>
+
+        <h3 class="sub-heading">Requirements</h3>
+        <ul>
+          <li>Reuse the password verification approach from Topic 2.</li>
+          <li>Establish server-side session state only after successful credential verification.</li>
+          <li>Rotate the session identifier at authentication.</li>
+          <li>Configure the session cookie deliberately.</li>
+          <li>Reject protected requests without a valid authenticated session.</li>
+          <li>Implement logout and server-side invalidation.</li>
+          <li>Define idle-timeout behavior and document whether an absolute timeout is required.</li>
+          <li>Explain how the design would change if the application used Redis and multiple instances.</li>
+        </ul>
+
+        <h3 class="sub-heading">Security requirements</h3>
+        <ul>
+          <li>Do not store plaintext passwords in the session.</li>
+          <li>Do not expose raw session IDs in logs.</li>
+          <li>Do not trust a session ID merely because it was supplied by the client.</li>
+          <li>Protect state-changing requests against CSRF.</li>
+          <li>Reject old session identifiers after logout or invalidation.</li>
+          <li>Do not allow store failures to bypass session validation.</li>
+        </ul>
+
+        <h3 class="sub-heading">Acceptance tests</h3>
+        <ol>
+          <li>Correct credentials establish authenticated state.</li>
+          <li>Incorrect credentials do not establish authenticated state.</li>
+          <li>An unauthenticated request cannot access the protected endpoint.</li>
+          <li>The session ID changes across the authentication transition.</li>
+          <li>A valid session allows the protected request.</li>
+          <li>Logout invalidates the session server-side.</li>
+          <li>Reusing the old cookie after logout does not grant access.</li>
+          <li>Expired sessions are rejected.</li>
+          <li>Cookie attributes match the intended production configuration.</li>
+          <li>State-changing requests follow the application's CSRF policy.</li>
+        </ol>
+
+        <h4 class="nested-heading">Optional extension</h4>
+        <p>Add a shared Redis-backed session store and design a maximum-concurrent-sessions policy. Explain how the application handles concurrent logins, session revocation and a Redis outage.</p>
+        <p><em>Do not start by adding Redis or concurrent-session limits. First get the single-instance lifecycle correct, then introduce distributed-state concerns.</em></p>
+      </section>
+
+      <!-- SECTION R -->
+      <section id="sec-r">
+        <h2 class="section-heading">R. Topic recap</h2>
+
+        <h3 class="sub-heading">1. Essential glossary</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Term</th>
+                <th>Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Session</td>
+                <td>Server-side state associated with a client interaction</td>
+              </tr>
+              <tr>
+                <td>Session ID</td>
+                <td>Identifier used to locate a session</td>
+              </tr>
+              <tr>
+                <td>Cookie</td>
+                <td>Browser-managed storage and transport mechanism for values</td>
+              </tr>
+              <tr>
+                <td><code>JSESSIONID</code></td>
+                <td>Common servlet-container session-cookie name</td>
+              </tr>
+              <tr>
+                <td><code>HttpOnly</code></td>
+                <td>Cookie attribute restricting ordinary script access</td>
+              </tr>
+              <tr>
+                <td><code>Secure</code></td>
+                <td>Cookie attribute restricting transmission to secure connections</td>
+              </tr>
+              <tr>
+                <td><code>SameSite</code></td>
+                <td>Cookie attribute controlling sending in cross-site contexts</td>
+              </tr>
+              <tr>
+                <td>Session fixation</td>
+                <td>Attack involving a victim authenticating with an attacker-known session identifier</td>
+              </tr>
+              <tr>
+                <td>Session hijacking</td>
+                <td>Reuse of a stolen valid session identifier</td>
+              </tr>
+              <tr>
+                <td>Session rotation</td>
+                <td>Replacing the session identifier at a security-sensitive transition</td>
+              </tr>
+              <tr>
+                <td>Idle timeout</td>
+                <td>Expiration after inactivity</td>
+              </tr>
+              <tr>
+                <td>Absolute timeout</td>
+                <td>Maximum total session lifetime</td>
+              </tr>
+              <tr>
+                <td>Session invalidation</td>
+                <td>Making the server-side session no longer valid</td>
+              </tr>
+              <tr>
+                <td>CSRF</td>
+                <td>Abuse of an authenticated browser context to trigger an unintended request</td>
+              </tr>
+              <tr>
+                <td>Distributed session store</td>
+                <td>Shared storage used by multiple application instances</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub-heading">2. Self-assessment</h3>
+        <h4>Learning checklist (0/10)</h4>
+        <ul class="checklist">
+          <li class="checklist-item">
+            <input type="checkbox" id="chk-l1">
+            <label for="chk-l1">Explain why HTTP needs a mechanism for maintaining authenticated state.</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="chk-l2">
+            <label for="chk-l2">Distinguish session data from the cookie carrying its identifier.</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="chk-l3">
+            <label for="chk-l3">Explain how the server creates, retrieves and invalidates sessions.</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="chk-l4">
+            <label for="chk-l4">Explain the security purpose of each major cookie attribute.</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="chk-l5">
+            <label for="chk-l5">Distinguish session fixation from session hijacking.</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="chk-l6">
+            <label for="chk-l6">Explain why session IDs should rotate after authentication.</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="chk-l7">
+            <label for="chk-l7">Differentiate browser cookie expiration from server-side session expiration.</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="chk-l8">
+            <label for="chk-l8">Compare in-memory sessions with a shared session store.</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="chk-l9">
+            <label for="chk-l9">Explain why cookie-based authentication creates CSRF considerations.</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="chk-l10">
+            <label for="chk-l10">Design tests proving that logout and expiration prevent reuse of old sessions.</label>
+          </li>
+        </ul>
+
+        <h3 class="sub-heading">3. Scope audit</h3>
+        <p><strong>Covered in Topic 3:</strong> HTTP session fundamentals, session IDs, cookies and attributes, lifecycle, logout, expiration, fixation, hijacking, session rotation, concurrency, in-memory versus distributed storage, CSRF fundamentals and a basic Java session demonstration.</p>
+        <p><strong>Earlier concepts reused:</strong> Topic 1's HTTP, trust boundaries and security principles; Topic 2's password verification and account-service design.</p>
+        <p><strong>Future concepts intentionally deferred:</strong> Topic 4: Spring Security architecture and filter-chain internals. Topic 5: Detailed roles and resource authorization. Topic 6: JWT and stateless authentication. Topics 7–10: API keys, MFA, OAuth2 and OIDC. Topic 11: Comprehensive CSRF, CORS, XSS and security-testing coverage.</p>
+        <p><strong>Implementation limitations:</strong> The manual Servlet session example is designed to teach the lifecycle. It is not a complete production authentication implementation and intentionally does not replace Spring Security's full session, CSRF and authentication protections.</p>
+
+        <h3 class="sub-heading">4. Recommended references</h3>
+        <ul>
+          <li><a href="https://docs.spring.io/spring-security/reference/servlet/authentication/session-management.html" target="_blank" rel="noopener noreferrer">Spring Security — Session Management</a> — session-fixation protection, session persistence and concurrent-session support.</li>
+          <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Session Management Cheat Sheet</a> — session-ID security, cookie attributes, expiration and invalidation.</li>
+          <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP CSRF Prevention Cheat Sheet</a> — CSRF risks and defense-in-depth techniques.</li>
+        </ul>
+
+        <div class="callout callout-blue" style="margin-top: 32px;">
+          <p><strong>Topic 3 complete.</strong> The key concept to retain is that the browser carries a session identifier, while the server maintains and validates the session state associated with it. Secure session management requires correct cookie configuration, identifier rotation, expiration, invalidation and protection against cross-site request forgery.</p>
+          <p style="margin-top: 10px;">The next topic is <strong>Topic 4 — Spring Security Architecture and Fundamentals</strong>. We will move from the session mechanics into how Spring Security integrates with the servlet container, processes requests through its security filters, maintains the security context and coordinates authentication.</p>
+          <p style="margin-top: 10px;">I will wait for your explicit instruction before generating Topic 4 notes.</p>
+        </div>
+      </section>
+
+    </article>
+  </main>
+
+  <!-- SCRIPT INITIALIZATION -->
+  <script>
+    // Initialize Mermaid diagrams
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#070b13',
+        primaryColor: '#1e3a8a',
+        primaryTextColor: '#93c5fd',
+        primaryBorderColor: '#3b82f6',
+        lineColor: '#64748b',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#1e293b'
+      }
+    });
+
+    // Smooth scroll offset handling for links
+    document.querySelectorAll('.sidebar-nav a').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        const targetElement = document.querySelector(targetId);
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
